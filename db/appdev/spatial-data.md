@@ -23,6 +23,7 @@ The Oracle Spatial support for vector data is conformant with the **Open Geospat
 ### SDO_GEOMETRY object type definition
 
 ```sql
+<<<<<<< Updated upstream
 DESCRIBE MDSYS.SDO_GEOMETRY;
 ```
 
@@ -238,12 +239,22 @@ CREATE TABLE geometries (
   geom        SDO_GEOMETRY,
   description VARCHAR2(100),
   CONSTRAINT geometries_pk PRIMARY KEY (id)
+=======
+-- Definition of SDO_GEOMETRY (conceptual; defined by MDSYS)
+CREATE TYPE sdo_geometry AS OBJECT (
+  sdo_gtype   NUMBER,                 -- geometry type code
+  sdo_srid    NUMBER,                 -- coordinate reference system (EPSG code)
+  sdo_point   SDO_POINT_TYPE,         -- shortcut for 2D/3D point types
+  sdo_elem_info SDO_ELEM_INFO_ARRAY,  -- element description array
+  sdo_ordinates SDO_ORDINATE_ARRAY    -- packed coordinate array
+>>>>>>> Stashed changes
 );
 ```
 
 The `geom` column can contain geometries of arbitrary geometry types. However, it is a good practice, to load and store  geometries into separate tables if the geometries represent different geometry types and coordinate systems.
 
 ```sql
+<<<<<<< Updated upstream
 -- Create a geometry table meant to store 2D points with SRID = 4326.
 CREATE TABLE points2d (
   id            NUMBER NOT NULL,
@@ -251,11 +262,36 @@ CREATE TABLE points2d (
   description   VARCHAR2(100),
   CONSTRAINT points2d_pk PRIMARY KEY (id)
 );
+=======
+-- 2D Point using SDO_POINT (fastest/simplest for point data)
+-- Format: SDO_GEOMETRY(gtype, srid, SDO_POINT_TYPE(x, y, z_or_null), null, null)
+SELECT
+  SDO_GEOMETRY(
+    2001,                           -- 2D Point
+    4326,                           -- WGS84 coordinate system (GPS)
+    SDO_POINT_TYPE(-122.4194, 37.7749, NULL),  -- San Francisco (lon, lat)
+    NULL,
+    NULL
+  ) AS sf_location
+FROM DUAL;
+
+-- 3D Point
+SELECT
+  SDO_GEOMETRY(
+    3001,            -- 3D Point
+    4326,
+    SDO_POINT_TYPE(-122.4194, 37.7749, 52.0),  -- with elevation in meters
+    NULL,
+    NULL
+  )
+FROM DUAL;
+>>>>>>> Stashed changes
 ```
 
 There are several ways to insert or load geometries into a table. Using SQL INSERT statements, here are some examples, assuming the specified tables were created in advance:
 
 ```sql
+<<<<<<< Updated upstream
 --
 -- 2D Points / SRID=4326
 --
@@ -301,6 +337,24 @@ VALUES (
   )
   , 'Sydney City Center, Australia'
 );
+=======
+-- 2D LineString (a route or road segment)
+-- SDO_ELEM_INFO: (starting_offset, etype, interpretation)
+--   etype 2 = line string, interpretation 1 = straight segments
+SELECT
+  SDO_GEOMETRY(
+    2002,           -- 2D LineString
+    4326,           -- WGS84
+    NULL,
+    SDO_ELEM_INFO_ARRAY(1, 2, 1),                -- one line string, straight segments
+    SDO_ORDINATE_ARRAY(
+        -122.4194, 37.7749,   -- point 1 (start)
+        -122.4094, 37.7849,   -- point 2
+        -122.3994, 37.7749    -- point 3 (end)
+    )
+  ) AS route
+FROM DUAL;
+>>>>>>> Stashed changes
 ```
 
 ```sql
@@ -344,6 +398,7 @@ VALUES (
 ```
 
 ```sql
+<<<<<<< Updated upstream
 --
 -- Line Strings
 --
@@ -356,11 +411,22 @@ VALUES (
     4326,                          -- WGS 84 - Can also be defined using the constant SDO_LONLAT
     NULL,                          -- Always NULL if the geometry type is other than a point
     SDO_ELEM_INFO_ARRAY(1, 2, 1),  -- one line string, straight segments
+=======
+-- Simple 2D Polygon (closed ring, last point = first point)
+-- etype 1003 = exterior polygon ring, interpretation 1 = straight segments
+SELECT
+  SDO_GEOMETRY(
+    2003,           -- 2D Polygon
+    4326,
+    NULL,
+    SDO_ELEM_INFO_ARRAY(1, 1003, 1),    -- exterior ring, straight segments
+>>>>>>> Stashed changes
     SDO_ORDINATE_ARRAY(
       -122.4194, 37.7749,          -- 2D point 1 (start)
       -122.4094, 37.7849,          -- 2D point 2
       -122.3994, 37.7749           -- 2D point 3 (end)
     )
+<<<<<<< Updated upstream
   )
 );
 ```
@@ -395,6 +461,13 @@ INSERT INTO polygons2d (
   geom
 )
 VALUES (
+=======
+  ) AS sf_district
+FROM DUAL;
+
+-- Polygon with a hole (donut shape)
+SELECT
+>>>>>>> Stashed changes
   SDO_GEOMETRY(
     2003,
     4326,
@@ -415,8 +488,13 @@ VALUES (
       2, 8,
       2, 2
     )
+<<<<<<< Updated upstream
   )
 );
+=======
+  ) AS donut_polygon
+FROM DUAL;
+>>>>>>> Stashed changes
 ```
 
 ## Geometry metadata
@@ -432,8 +510,18 @@ Notes:
 ### USER_SDO_GEOM_METADATA definition
 
 ```sql
+<<<<<<< Updated upstream
 DESCRIBE USER_SDO_GEOM_METADATA;
 ```
+=======
+-- Create the table
+CREATE TABLE store_locations (
+  store_id    NUMBER PRIMARY KEY,
+  store_name  VARCHAR2(100),
+  city        VARCHAR2(50),
+  location    MDSYS.SDO_GEOMETRY
+);
+>>>>>>> Stashed changes
 
 ```txt
 Name        Null?    Type
@@ -477,6 +565,7 @@ INSERT INTO USER_SDO_GEOM_METADATA (
   srid
 )
 VALUES (
+<<<<<<< Updated upstream
   'points2d',
   'geom_4326',
   SDO_DIM_ARRAY(
@@ -503,6 +592,27 @@ VALUES (
   ),
   4979                                          -- WGS 84 (3D)
 );
+=======
+  'STORE_LOCATIONS',
+  'LOCATION',
+  SDO_DIM_ARRAY(
+    SDO_DIM_ELEMENT('LONGITUDE', -180, 180, 0.00001),  -- ~1 meter in degrees
+    SDO_DIM_ELEMENT('LATITUDE',   -90,  90, 0.00001)
+  ),
+  4326  -- WGS84 (GPS coordinates)
+);
+COMMIT;
+
+-- Insert some sample stores
+INSERT INTO store_locations VALUES (1, 'SF Downtown', 'San Francisco',
+  SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(-122.4194, 37.7749, NULL), NULL, NULL));
+
+INSERT INTO store_locations VALUES (2, 'Oakland Uptown', 'Oakland',
+  SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(-122.2711, 37.8044, NULL), NULL, NULL));
+
+INSERT INTO store_locations VALUES (3, 'San Jose Center', 'San Jose',
+  SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(-121.8863, 37.3382, NULL), NULL, NULL));
+>>>>>>> Stashed changes
 
 COMMIT;
 ```
@@ -510,6 +620,7 @@ COMMIT;
 The validity of entries in the `USER_SDO_GEOM_METADATA` can be verified using the following queries:
 
 ```sql
+<<<<<<< Updated upstream
 -- Verify that the metadata was inserted correctly
 SELECT
   *
@@ -537,6 +648,19 @@ WHERE
 ORDER BY
   table_name,
   column_name;
+=======
+-- Create spatial index (must have metadata registered first)
+CREATE INDEX idx_store_locations_geom
+  ON store_locations (location)
+  INDEXTYPE IS MDSYS.SPATIAL_INDEX
+  PARAMETERS ('sdo_indx_dims=2');
+
+-- For 3D spatial data
+CREATE INDEX idx_buildings_3d
+  ON buildings (geom_col)
+  INDEXTYPE IS MDSYS.SPATIAL_INDEX_V2
+  PARAMETERS ('sdo_indx_dims=3');
+>>>>>>> Stashed changes
 
 -- Check for spatial tables with invalid bounds (lower bound > upper bound)
 SELECT
@@ -672,6 +796,7 @@ DROP INDEX geometry_data_geom_sidx FORCE;
 Information about the created indexes can be retrieved using the following queries:
 
 ```sql
+<<<<<<< Updated upstream
 -- Query metadata specific to spatial indexes - Basic information
 SELECT
   *
@@ -750,6 +875,22 @@ WHERE
 ORDER BY
   i.table_name,
   i.index_name;
+=======
+-- Find all stores within a district boundary polygon
+SELECT
+  s.store_id,
+  s.store_name
+FROM
+  store_locations s,
+  district_boundaries d
+WHERE
+  d.district_name = 'Bay Area'
+  AND SDO_RELATE(
+    s.location,          -- geometry 1 (indexed column)
+    d.boundary,          -- geometry 2
+    'mask=INSIDE'        -- relationship mask
+  ) = 'TRUE';
+>>>>>>> Stashed changes
 ```
 
 ### Spatial index validations
@@ -860,12 +1001,17 @@ Oracle Spatial identifies the following relationships:
 ##### SDO_RELATE query examples
 
 ```sql
+<<<<<<< Updated upstream
 -- Find all stores within a district boundary polygon
+=======
+-- ANYINTERACT: find any geometries that touch, overlap, or contain each other
+>>>>>>> Stashed changes
 SELECT
   s.store_id,
   s.store_name
 FROM
   store_locations s,
+<<<<<<< Updated upstream
   district_boundaries d
 WHERE
   d.district_name = 'Bay Area'
@@ -907,6 +1053,20 @@ FROM (
     us_cities c,
     us_states s
   );
+=======
+  flood_zones f
+WHERE
+  f.risk_level = 'HIGH'
+  AND SDO_RELATE(s.location, f.boundary, 'mask=ANYINTERACT') = 'TRUE';
+
+-- Multiple masks combined with +
+SELECT *
+FROM
+  parcel_map p,
+  utility_lines u
+WHERE
+  SDO_RELATE(p.geom, u.geom, 'mask=TOUCH+OVERLAPBDYINTERSECT') = 'TRUE';
+>>>>>>> Stashed changes
 ```
 
 ##### SDO_DISJOINT query examples
@@ -1169,6 +1329,7 @@ FROM
   store_locations s
 WHERE
   SDO_WITHIN_DISTANCE(
+<<<<<<< Updated upstream
     s.location,              -- spatially indexed geometry
     SDO_GEOMETRY(
       2001,
@@ -1184,10 +1345,24 @@ WHERE
 ) = 'TRUE';
 
 -- Similar query that orders the results by the actual distance
+=======
+    s.location,                                              -- indexed geometry
+    SDO_GEOMETRY(
+      2001,
+      4326,
+      SDO_POINT_TYPE(-122.4000, 37.7700, NULL),
+      NULL,
+      NULL),  -- query point
+    'distance=5 unit=km'                                     -- distance spec
+  ) = 'TRUE';
+
+-- Order results by actual distance
+>>>>>>> Stashed changes
 SELECT
   s.store_id,
   s.store_name,
   SDO_GEOM.SDO_DISTANCE(
+<<<<<<< Updated upstream
       s.location,
       SDO_GEOMETRY(
         2001,
@@ -1201,6 +1376,18 @@ SELECT
       ),
       0.001,              -- tolerance
       'unit=km'
+=======
+    s.location,
+    SDO_GEOMETRY(
+      2001,
+      4326,
+      SDO_POINT_TYPE(-122.4000, 37.7700, NULL),
+      NULL,
+      NULL
+    ),
+    0.001,   -- tolerance
+    'unit=km'
+>>>>>>> Stashed changes
   ) AS distance_km
 FROM
   store_locations s
@@ -1210,15 +1397,20 @@ WHERE
     SDO_GEOMETRY(
       2001,
       4326,
+<<<<<<< Updated upstream
       SDO_POINT_TYPE(
         -122.4000,
         37.7700,
         NULL),
+=======
+      SDO_POINT_TYPE(-122.4000, 37.7700, NULL),
+>>>>>>> Stashed changes
       NULL,
       NULL
     ),
     'distance=5 unit=km'
   ) = 'TRUE'
+<<<<<<< Updated upstream
 ORDER BY
   distance_km;
 
@@ -1331,6 +1523,9 @@ WHERE
   ) >= 15
 ORDER BY
   distance;
+=======
+ORDER  BY distance_km;
+>>>>>>> Stashed changes
 ```
 
 #### Point-In-Polygon searches
@@ -1429,8 +1624,12 @@ WHERE
 
 -- Find the 3 nearest stores to a customer location
 SELECT
+<<<<<<< Updated upstream
   s.store_id,
   s.store_name,
+=======
+  s.store_id, s.store_name,
+>>>>>>> Stashed changes
   SDO_NN_DISTANCE(1) AS distance_meters
 FROM
   store_locations s
@@ -1440,25 +1639,39 @@ WHERE
     SDO_GEOMETRY(
       2001,
       4326,
+<<<<<<< Updated upstream
       SDO_POINT_TYPE(
         10.256,
         53.653,
         NULL
       ),
+=======
+      SDO_POINT_TYPE(-122.4000, 37.7700, NULL),
+>>>>>>> Stashed changes
       NULL,
       NULL
     ),
     'sdo_num_res=3 unit=meter',
+<<<<<<< Updated upstream
     1
 ) = 'TRUE'
 ORDER BY
   distance_meters;
+=======
+    1          -- correlation number (must match SDO_NN_DISTANCE argument)
+  ) = 'TRUE'
+ORDER  BY distance_meters;
+>>>>>>> Stashed changes
 
 -- SDO_NN with additional filter (stores that are open)
 SELECT
   s.store_id,
   s.store_name,
+<<<<<<< Updated upstream
   SDO_NN_DISTANCE(1) AS distance
+=======
+  SDO_NN_DISTANCE(1) AS dist
+>>>>>>> Stashed changes
 FROM
   store_locations s
 WHERE
@@ -1467,20 +1680,30 @@ WHERE
     SDO_GEOMETRY(
       2001,
       4326,
+<<<<<<< Updated upstream
       SDO_POINT_TYPE(
         10.256,
         53.653,
         NULL
       ),
+=======
+      SDO_POINT_TYPE(-122.4, 37.77, NULL),
+>>>>>>> Stashed changes
       NULL,
       NULL
     ),
     'sdo_num_res=10',
     1
   ) = 'TRUE'
+<<<<<<< Updated upstream
   AND is_open = 'Y'
 ORDER BY
   distance
+=======
+  AND s.is_open = 'Y'
+ORDER BY
+  dist
+>>>>>>> Stashed changes
 FETCH FIRST 3 ROWS ONLY;
 ```
 
@@ -1513,6 +1736,7 @@ Here is what happens behind the scenes:
 ##### Example to validate geometries and fix invalid geometry
 
 ```sql
+<<<<<<< Updated upstream
 DECLARE
 -- Declare a custom exception for uncorrectable geometries
 -- "ORA-13199: the given geometry cannot be rectified"
@@ -1581,6 +1805,28 @@ BEGIN
   END IF;
 END;
 /
+=======
+-- Find all points inside a polygon
+SELECT
+  s.store_id,
+  s.store_name
+FROM
+  store_locations s,
+  sales_territories t
+WHERE
+  t.territory_id = 7
+  AND SDO_CONTAINS(t.boundary, s.location) = 'TRUE';
+
+-- SDO_INSIDE: reverse of CONTAINS
+SELECT
+  t.territory_name
+FROM
+  store_locations s,
+  sales_territories t
+WHERE
+  s.store_id = 42
+  AND SDO_INSIDE(s.location, t.boundary) = 'TRUE';
+>>>>>>> Stashed changes
 ```
 
 #### Measure single geometries
@@ -1672,6 +1918,7 @@ ORDER BY
 -- Calculate distance between two points
 SELECT
   SDO_GEOM.SDO_DISTANCE(
+<<<<<<< Updated upstream
     SDO_GEOMETRY(
       2001,
       4326,
@@ -1691,6 +1938,71 @@ SELECT
 ) AS sf_to_la_km
 FROM
   DUAL;
+=======
+    SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(-122.4194, 37.7749, NULL), NULL, NULL),
+    SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(-118.2437, 34.0522, NULL), NULL, NULL),
+    0.001,         -- tolerance
+    'unit=km'
+  ) AS sf_to_la_km
+FROM DUAL;
+
+-- Calculate area of a polygon
+SELECT
+  SDO_GEOM.SDO_AREA(
+    SDO_GEOMETRY(
+      2003,
+      4326,
+      NULL,
+      SDO_ELEM_INFO_ARRAY(1, 1003, 1),
+      SDO_ORDINATE_ARRAY(-122.45, 37.75, -122.40, 37.75, -122.40, 37.80, -122.45, 37.80, -122.45, 37.75)
+    ),
+    0.001,         -- tolerance
+    'unit=sq_km'   -- square kilometers
+  ) AS area_sq_km
+FROM DUAL;
+
+-- Calculate length/perimeter
+SELECT SDO_GEOM.SDO_LENGTH(geom, 0.001, 'unit=km') AS length_km
+FROM   road_segments
+WHERE  road_id = 101;
+
+-- Buffer: create a polygon at a fixed distance from a geometry
+SELECT
+  SDO_GEOM.SDO_BUFFER(
+    location,
+    5000,         -- 5000 meters
+    0.001         -- tolerance
+  ) AS five_km_buffer
+FROM
+  store_locations
+WHERE
+  store_id = 1;
+
+-- Union of geometries
+SELECT
+  SDO_GEOM.SDO_UNION(geom_a, geom_b, 0.001) AS merged_geom
+FROM (
+  SELECT
+    a.boundary AS geom_a,
+    b.boundary AS geom_b
+  FROM
+    sales_territories a,
+    sales_territories b
+  WHERE
+    a.territory_id = 1
+    AND b.territory_id = 2
+  );
+
+-- Intersection
+SELECT
+  SDO_GEOM.SDO_INTERSECTION(
+    polygon_a,
+    polygon_b,
+    0.001
+  ) AS intersection_geom
+FROM
+  geometry_pairs;
+>>>>>>> Stashed changes
 ```
 
 #### Aggregate geometries
@@ -1721,6 +2033,7 @@ SELECT
 FROM
   geometry_pairs;
 
+<<<<<<< Updated upstream
 -- How much space does Yellowstone National Park occupy in each state?
 SELECT
   s.state,
@@ -1741,6 +2054,18 @@ WHERE
   AND p.name = 'Yellowstone NP'
 ORDER BY
   area DESC;
+=======
+-- Convert between coordinate systems
+SELECT
+  SDO_CS.TRANSFORM(
+    location,
+    3857    -- convert from 4326 (WGS84) to 3857 (Web Mercator)
+  ) AS location_web_mercator
+FROM
+  store_locations
+WHERE
+  store_id = 1;
+>>>>>>> Stashed changes
 
 -- What percentage of Yellowstone National Park lies in each state ?
 WITH p AS (
@@ -2204,6 +2529,7 @@ SELECT
         'city' VALUE city
       )
     )
+<<<<<<< Updated upstream
 ) AS geojson_collection
 FROM
   store_locations;
@@ -2229,6 +2555,114 @@ SELECT
   ) AS "{}json_document"
 FROM
   meteo_stations g;
+=======
+  ) AS geojson_collection
+FROM
+  store_locations;
+```
+
+---
+
+## Convert to/from Standard Spatial Formats
+
+Besides the conversion from or to GeoJSON, the `SDO_UTIL` package contains other functions to convert spatial data from standard formats into `SDO_GEOMETRY` or from `SDO_GEOMETRY` to those other formats. The current list of supported formats is:
+
+- GML
+- GML 3.1.x
+- Well-Known Text (WKT), WellKnown Binary (WKB)
+- JSON
+
+## FROM/TO WKT and WKB
+
+The following PL/SQL code shows the conversion to and from WKB and WKT format, and the validation of WKB and WKT geometries.
+
+```sql
+DECLARE
+  wkbgeom     BLOB;
+  wktgeom     CLOB;
+  val_result  VARCHAR2(5);
+  geom_result SDO_GEOMETRY;
+  geom        SDO_GEOMETRY;
+BEGIN
+  SELECT
+    c.geometry INTO geom
+  FROM
+    geometries_table
+  WHERE
+    c.id = 1;
+
+  -- To WBT/WKT geometry
+  wkbgeom := SDO_UTIL.TO_WKBGEOMETRY(geom);
+  wktgeom := SDO_UTIL.TO_WKTGEOMETRY(geom);
+  DBMS_OUTPUT.PUT_LINE('To WKT geometry result = ' || TO_CHAR(wktgeom));
+
+  -- From WBT/WKT geometry
+  geom_result := SDO_UTIL.FROM_WKBGEOMETRY(wkbgeom);
+  geom_result := SDO_UTIL.FROM_WKTGEOMETRY(wktgeom);
+
+  -- Validate WBT/WKT geometry
+  val_result := SDO_UTIL.VALIDATE_WKBGEOMETRY(wkbgeom);
+  DBMS_OUTPUT.PUT_LINE('WKB validation result = ' || val_result);
+  val_result := SDO_UTIL.VALIDATE_WKTGEOMETRY(wktgeom);
+  DBMS_OUTPUT.PUT_LINE('WKT validation result = ' || val_result);
+
+END;
+/
+```
+
+### FROM/TO GML 3.1.1/3.1.3
+
+The following PL/SQL code shows the conversion to and from GML version 3.1.1 format.
+
+```sql
+DECLARE
+  gmlgeom     CLOB;
+  geom_result SDO_GEOMETRY;
+  geom        SDO_GEOMETRY;
+BEGIN
+  SELECT
+    c.geometry INTO geom
+  FROM
+    geometries_table
+  WHERE
+    c.id = 1;
+
+  -- To GML 3.1.1 geometry
+  gmlgeom := SDO_UTIL.TO_GML311GEOMETRY(geom);
+  DBMS_OUTPUT.PUT_LINE('To GML 3.1.1 geometry result = ' || TO_CHAR(gmlgeom));
+
+  -- From GML 3.1.3 geometry
+  geom_result := SDO_UTIL.FROM_GML311GEOMETRY(gmlgeom);
+END;
+/
+```
+
+### FROM/TO JSON
+
+The following PL/SQL code shows the conversion to and from JSON.
+
+```sql
+DECLARE
+  cola_b_geom   SDO_GEOMETRY;
+  returned_geom SDO_GEOMETRY;
+  returned_json CLOB;
+BEGIN
+  SELECT
+    c.geometry INTO geom
+  FROM
+    geometries_table
+  WHERE
+    c.id = 1;
+
+  -- From geometry to JSON
+  returned_json := SDO_UTIL.TO_JSON(geom);
+
+  -- From JSON to geometry
+  returned_geom := SDO_UTIL.FROM_JSON(returned_json);
+
+END;
+/
+>>>>>>> Stashed changes
 ```
 
 ## Common ORA error messages
@@ -2247,6 +2681,7 @@ FROM
 
 ## Best Practices
 
+<<<<<<< Updated upstream
 * **Validate all geometries** after load, update and fix any validation errors before perforing any operations on the data, such as creating a spatial index.
 * **Always register `USER_SDO_GEOM_METADATA`** before creating a spatial index. The metadata defines the valid coordinate extent and tolerance.
 * **Use WGS84 (SRID=4326)** for general-purpose geographic data (GPS coordinates). Use projected coordinate systems (UTM, State Plane) when precise metric distances are required.
@@ -2258,6 +2693,39 @@ FROM
 * **Use `SDO_NN` for nearest-neighbor queries** rather than `SDO_WITHIN_DISTANCE` with large radii, which scans more of the index.
 * **Partition large spatial tables** by geographic region (e.g., by state or country) to enable partition pruning in spatial queries.
 * A **composite B-tree spatial index** is used for fast spatial query performance on point data. It also improves the performance for spatial index creation and when performing concurrent DML on spatial data.
+=======
+- **Always register `USER_SDO_GEOM_METADATA`** before creating a spatial index. The metadata defines the valid coordinate extent and tolerance.
+- **Use WGS84 (SRID=4326)** for general-purpose geographic data (GPS coordinates). Use projected coordinate systems (UTM, State Plane) when precise metric distances are required.
+- **Set tolerance appropriately**: ~0.00001 degrees (≈1 meter) for geographic data, 0.001 for projected data in meters. Too tight a tolerance causes false "not equal" results; too loose conflates nearby features.
+- **Use spatial operators (`SDO_RELATE`, `SDO_NN`)** in WHERE clauses — not spatial functions (`SDO_GEOM.*`) — to leverage the spatial index.
+- **Pre-compute common distances** for frequently compared geometry pairs and store them as regular NUMBER columns with B-tree indexes.
+- **Use `SDO_NN` for nearest-neighbor queries** rather than `SDO_WITHIN_DISTANCE` with large radii, which scans more of the index.
+- **Partition large spatial tables** by geographic region (e.g., by state or country) to enable partition pruning in spatial queries.
+- **Validate geometry before insertion** using `SDO_GEOM.VALIDATE_GEOMETRY_WITH_CONTEXT`.
+
+```sql
+-- Validate geometry before insert
+DECLARE
+  v_result VARCHAR2(100);
+BEGIN
+  v_result := SDO_GEOM.VALIDATE_GEOMETRY_WITH_CONTEXT(
+    SDO_GEOMETRY(
+      2003,
+      4326,
+      NULL,
+      SDO_ELEM_INFO_ARRAY(1, 1003, 1),
+      SDO_ORDINATE_ARRAY(0,0, 1,0, 1,1, 0,1, 0,0)
+    ),
+    0.001
+  );
+  IF v_result != 'TRUE' THEN
+    RAISE_APPLICATION_ERROR(-20010, 'Invalid geometry: ' || v_result);
+  END IF;
+END;
+```
+
+---
+>>>>>>> Stashed changes
 
 ## Common Mistakes
 
